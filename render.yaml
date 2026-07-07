@@ -52,4 +52,4 @@ databases:
   # Managed PostgreSQL database instance
   - name: product-optimizer-db
     databaseName: content_optimizer
-    user: postgres
+    
