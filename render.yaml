@@ -1,0 +1,55 @@
+services:
+  # Managed FastAPI web application backend
+  - type: web
+    name: product-optimizer-backend
+    env: python
+    rootDirectory: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: product-optimizer-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: product-optimizer-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false # Filled via Render Dashboard UI
+      - key: TAVILY_API_KEY
+        sync: false # Filled via Render Dashboard UI
+
+  # Celery asynchronous background worker
+  - type: worker
+    name: product-optimizer-worker
+    env: python
+    rootDirectory: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.tasks.pipeline.celery_app worker --loglevel=info -P solo
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: product-optimizer-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: product-optimizer-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+
+  # Redis instance for Celery queue broker
+  - type: redis
+    name: product-optimizer-redis
+    ipAllowList: [] # Restrict to internal connections only
+
+databases:
+  # Managed PostgreSQL database instance
+  - name: product-optimizer-db
+    databaseName: content_optimizer
+    user: postgres
